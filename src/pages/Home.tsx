@@ -21,25 +21,34 @@ const Home = () => {
   const [gender, setGender] = useState<"male" | "female" | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [landmarks, setLandmarks] = useState<any>(null);
   const [results, setResults] = useState<any>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const loadModels = async () => {
     if (modelsLoaded) return;
     
     try {
+      setLoadingProgress(10);
       toast({ title: "Loading AI models...", description: "This may take a moment" });
       
       const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
+      
+      setLoadingProgress(30);
       await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      
+      setLoadingProgress(70);
       await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
       
+      setLoadingProgress(100);
       setModelsLoaded(true);
       toast({ title: "✓ Models loaded", description: "Ready to analyze!" });
     } catch (error) {
       console.error("Error loading models:", error);
+      setLoadingProgress(0);
       toast({ 
         title: "Error loading models", 
         description: "Please refresh the page and try again",
@@ -67,9 +76,12 @@ const Home = () => {
     try {
       const img = imageRef.current;
       
-      // Detect face and landmarks
+      // Detect face and landmarks with optimized settings
       const detection = await window.faceapi
-        .detectSingleFace(img, new window.faceapi.TinyFaceDetectorOptions())
+        .detectSingleFace(img, new window.faceapi.TinyFaceDetectorOptions({
+          inputSize: 416,
+          scoreThreshold: 0.5
+        }))
         .withFaceLandmarks();
 
       if (!detection) {
@@ -125,6 +137,54 @@ const Home = () => {
     setLandmarks(null);
   };
 
+  const handleDownloadReport = async () => {
+    if (!resultsRef.current || !imageRef.current) return;
+
+    try {
+      // Create a canvas for the report
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      canvas.width = 1200;
+      canvas.height = 1600;
+
+      // Background
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Title
+      ctx.fillStyle = '#6b8afd';
+      ctx.font = 'bold 40px Inter';
+      ctx.fillText('🐆 Lynxmax Analysis Report', 40, 60);
+
+      // Draw analyzed image
+      const img = imageRef.current;
+      const imgAspect = img.naturalWidth / img.naturalHeight;
+      const targetWidth = 600;
+      const targetHeight = targetWidth / imgAspect;
+      ctx.drawImage(img, 300, 100, targetWidth, targetHeight);
+
+      // Add score
+      if (results) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 32px Inter';
+        ctx.fillText(`Overall Score: ${results.overallScore}/100`, 40, targetHeight + 150);
+      }
+
+      // Download
+      const link = document.createElement('a');
+      link.download = 'lynxmax-report.png';
+      link.href = canvas.toDataURL();
+      link.click();
+
+      toast({ title: "✓ Report downloaded", description: "Report saved successfully" });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({ title: "Download failed", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl page-transition">
       {/* Hero Section */}
@@ -144,6 +204,22 @@ const Home = () => {
           🔒 <strong>100% Private:</strong> All analysis runs locally in your browser. No images are uploaded or stored.
         </p>
       </div>
+
+      {/* Model Loading Progress */}
+      {loadingProgress > 0 && loadingProgress < 100 && (
+        <div className="glass-card p-4 mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Loading AI models...</span>
+            <span className="text-sm text-muted-foreground">{loadingProgress}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div 
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${loadingProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Upload Section */}
       <div className="space-y-6 mb-8">
@@ -198,7 +274,7 @@ const Home = () => {
 
       {/* Results Section */}
       {results && (
-        <div className="space-y-8">
+        <div ref={resultsRef} className="space-y-8">
           <QualityPanel 
             roll={results.quality.roll}
             yaw={results.quality.yaw}
@@ -212,9 +288,9 @@ const Home = () => {
           />
 
           <div className="flex justify-center">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleDownloadReport}>
               <Download className="w-4 h-4" />
-              Download Report (Coming Soon)
+              Download Report (PNG)
             </Button>
           </div>
         </div>
