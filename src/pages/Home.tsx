@@ -159,47 +159,129 @@ const Home = () => {
   };
 
   const handleDownloadReport = async () => {
-    if (!resultsRef.current || !imageRef.current) return;
+    if (!resultsRef.current || !imageRef.current || !results) return;
 
     try {
-      // Create a canvas for the report
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      // A4 dimensions: 210mm x 297mm
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      
+      // Background gradient effect
+      doc.setFillColor(10, 10, 20);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Header with accent
+      doc.setFillColor(107, 138, 253);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      // Logo and Title
+      doc.setFontSize(28);
+      doc.setTextColor(255, 255, 255);
+      doc.text('🐆 Lynxmax Analysis Report', margin, 25);
+      
+      // Date
+      doc.setFontSize(10);
+      doc.setTextColor(220, 220, 220);
+      doc.text(new Date().toLocaleDateString(), pageWidth - margin, 25, { align: 'right' });
+      
+      let yPos = 55;
+      
+      // Add image
+      const img = imageRef.current;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      canvas.width = 1200;
-      canvas.height = 1600;
-
-      // Background
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Title
-      ctx.fillStyle = '#6b8afd';
-      ctx.font = 'bold 40px Inter';
-      ctx.fillText('🐆 Lynxmax Analysis Report', 40, 60);
-
-      // Draw analyzed image
-      const img = imageRef.current;
-      const imgAspect = img.naturalWidth / img.naturalHeight;
-      const targetWidth = 600;
-      const targetHeight = targetWidth / imgAspect;
-      ctx.drawImage(img, 300, 100, targetWidth, targetHeight);
-
-      // Add score
-      if (results) {
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px Inter';
-        ctx.fillText(`Overall Score: ${results.overallScore}/100`, 40, targetHeight + 150);
+      if (ctx) {
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        const imgWidth = 80;
+        const imgHeight = imgWidth / imgAspect;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+        const imgData = canvas.toDataURL('image/jpeg', 0.8);
+        doc.addImage(imgData, 'JPEG', (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
+        yPos += imgHeight + 15;
       }
-
-      // Download
-      const link = document.createElement('a');
-      link.download = 'lynxmax-report.png';
-      link.href = canvas.toDataURL();
-      link.click();
-
-      toast({ title: "✓ Report downloaded", description: "Report saved successfully" });
+      
+      // Overall Score Box
+      doc.setFillColor(30, 30, 40);
+      doc.roundedRect(margin, yPos, contentWidth, 20, 3, 3, 'F');
+      doc.setFontSize(16);
+      doc.setTextColor(107, 138, 253);
+      doc.text(`Overall Score: ${results.overallScore}/100`, pageWidth / 2, yPos + 13, { align: 'center' });
+      yPos += 30;
+      
+      // Harmony Summary
+      doc.setFontSize(12);
+      doc.setTextColor(200, 200, 200);
+      doc.text('Harmony Summary:', margin, yPos);
+      yPos += 7;
+      doc.setFontSize(10);
+      doc.setTextColor(180, 180, 180);
+      const summaryLines = doc.splitTextToSize(results.harmonySummary, contentWidth);
+      doc.text(summaryLines, margin, yPos);
+      yPos += summaryLines.length * 5 + 10;
+      
+      // Metrics Grid
+      doc.setFontSize(14);
+      doc.setTextColor(107, 138, 253);
+      doc.text('Detailed Metrics', margin, yPos);
+      yPos += 10;
+      
+      const metricsPerPage = 8;
+      results.metrics.forEach((metric: any, index: number) => {
+        if (yPos > pageHeight - 40) {
+          doc.addPage();
+          yPos = margin;
+          doc.setFillColor(10, 10, 20);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        }
+        
+        // Metric card
+        doc.setFillColor(25, 25, 35);
+        doc.roundedRect(margin, yPos, contentWidth, 18, 2, 2, 'F');
+        
+        // Metric name
+        doc.setFontSize(11);
+        doc.setTextColor(220, 220, 220);
+        doc.text(metric.name, margin + 3, yPos + 6);
+        
+        // Metric value
+        doc.setFontSize(10);
+        doc.setTextColor(107, 138, 253);
+        doc.text(metric.value, margin + 3, yPos + 12);
+        
+        // Confidence dot
+        const dotX = pageWidth - margin - 5;
+        const dotY = yPos + 6;
+        const dotColor = metric.confidence === 'high' ? [34, 197, 94] : 
+                         metric.confidence === 'medium' ? [234, 179, 8] : [156, 163, 175];
+        doc.setFillColor(dotColor[0], dotColor[1], dotColor[2]);
+        doc.circle(dotX, dotY, 2, 'F');
+        
+        // Feedback text
+        doc.setFontSize(9);
+        doc.setTextColor(160, 160, 160);
+        const feedbackLines = doc.splitTextToSize(metric.feedback, contentWidth - 10);
+        doc.text(feedbackLines, margin + 3, yPos + 16);
+        
+        yPos += 22;
+      });
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Generated by Lynxmax - AI Facial Analysis Tool', pageWidth / 2, pageHeight - 10, { align: 'center' });
+      doc.text('All analysis performed locally in your browser', pageWidth / 2, pageHeight - 6, { align: 'center' });
+      
+      // Save PDF
+      doc.save('lynxmax-report.pdf');
+      
+      toast({ title: "✓ Report downloaded", description: "PDF saved successfully" });
     } catch (error) {
       console.error("Download error:", error);
       toast({ title: "Download failed", variant: "destructive" });
@@ -313,7 +395,7 @@ const Home = () => {
           <div className="flex justify-center">
             <Button variant="outline" className="gap-2" onClick={handleDownloadReport}>
               <Download className="w-4 h-4" />
-              Download Report (PNG)
+              Download Report (PDF)
             </Button>
           </div>
         </div>

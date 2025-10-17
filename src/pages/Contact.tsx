@@ -21,11 +21,6 @@ const Contact = () => {
         </CardContent>
       </Card>
 
-      <div className="mt-8 text-center text-sm text-muted-foreground">
-        <p>
-          Messages are sent to asdss0582@gmail.com via Formspree.
-        </p>
-      </div>
     </div>
   );
 };
