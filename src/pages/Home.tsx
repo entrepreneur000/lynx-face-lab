@@ -251,13 +251,13 @@ const Home = () => {
         />
 
         {imageUrl && (
-          <div className="relative glass-card p-4">
-            <div className="relative inline-block">
+          <div className="relative glass-card p-4 flex justify-center">
+            <div className="relative">
               <img
                 ref={imageRef}
                 src={imageUrl}
                 alt="Analysis target"
-                className="max-w-full max-h-96 mx-auto rounded-lg"
+                className="max-w-full max-h-96 rounded-lg"
                 crossOrigin="anonymous"
               />
               {landmarks && imageRef.current && (
