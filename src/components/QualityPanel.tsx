@@ -5,14 +5,22 @@ interface QualityPanelProps {
   roll: number;
   yaw: number;
   ipd: number;
+  rollThreshold?: number;
+  yawThreshold?: [number, number];
 }
 
-export const QualityPanel = ({ roll, yaw, ipd }: QualityPanelProps) => {
-  const hasIssues = Math.abs(roll) > 5 || yaw < 0.9 || yaw > 1.1 || ipd < 120;
+export const QualityPanel = ({ 
+  roll, 
+  yaw, 
+  ipd,
+  rollThreshold = 8,
+  yawThreshold = [0.85, 1.15]
+}: QualityPanelProps) => {
+  const hasIssues = Math.abs(roll) > rollThreshold || yaw < yawThreshold[0] || yaw > yawThreshold[1] || ipd < 120;
 
   const issues: string[] = [];
-  if (Math.abs(roll) > 5) issues.push("Head is tilted");
-  if (yaw < 0.9 || yaw > 1.1) issues.push("Head is turned to the side");
+  if (Math.abs(roll) > rollThreshold) issues.push("Head is tilted");
+  if (yaw < yawThreshold[0] || yaw > yawThreshold[1]) issues.push("Head is turned to the side");
   if (ipd < 120) issues.push("Low resolution or face too far");
 
   if (!hasIssues) {

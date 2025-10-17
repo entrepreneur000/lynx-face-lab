@@ -300,6 +300,8 @@ const Home = () => {
             roll={results.quality.roll}
             yaw={results.quality.yaw}
             ipd={results.quality.ipd}
+            rollThreshold={8}
+            yawThreshold={[0.85, 1.15]}
           />
 
           <ResultsGrid

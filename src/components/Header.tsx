@@ -1,8 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
 
 export const Header = () => {
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -23,6 +26,7 @@ export const Header = () => {
           </span>
         </Link>
         
+        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
@@ -42,22 +46,38 @@ export const Header = () => {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           
-          {/* Mobile menu */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile burger menu button */}
+          <button
+            className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu dropdown */}
+      {mobileMenuOpen && (
+        <nav className="md:hidden glass-card border-t border-white/10 animate-fade-in">
+          <div className="container mx-auto px-4 py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm px-2 py-1 rounded ${
-                  isActive(link.path) ? "text-primary font-medium" : ""
+                onClick={() => setMobileMenuOpen(false)}
+                className={`px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive(link.path)
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "hover:bg-muted"
                 }`}
               >
                 {link.label}
               </Link>
             ))}
           </div>
-        </div>
-      </div>
+        </nav>
+      )}
     </header>
   );
 };
