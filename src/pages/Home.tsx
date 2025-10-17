@@ -22,6 +22,7 @@ const Home = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStep, setLoadingStep] = useState<string>("");
   const [landmarks, setLandmarks] = useState<any>(null);
   const [results, setResults] = useState<any>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -32,23 +33,28 @@ const Home = () => {
     if (modelsLoaded) return;
     
     try {
+      setLoadingStep("Loading AI models...");
       setLoadingProgress(10);
-      toast({ title: "Loading AI models...", description: "This may take a moment" });
       
       const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
       
       setLoadingProgress(30);
+      setLoadingStep("Loading face detector...");
       await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
       
       setLoadingProgress(70);
+      setLoadingStep("Loading landmark detector...");
       await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
       
       setLoadingProgress(100);
+      setLoadingStep("Models loaded ✓");
       setModelsLoaded(true);
-      toast({ title: "✓ Models loaded", description: "Ready to analyze!" });
+      
+      setTimeout(() => setLoadingStep(""), 1000);
     } catch (error) {
       console.error("Error loading models:", error);
       setLoadingProgress(0);
+      setLoadingStep("");
       toast({ 
         title: "Error loading models", 
         description: "Please refresh the page and try again",
@@ -72,6 +78,8 @@ const Home = () => {
 
     setAnalyzing(true);
     setResults(null);
+    setLoadingStep("Detecting face...");
+    setLoadingProgress(20);
     
     try {
       const img = imageRef.current;
@@ -83,6 +91,9 @@ const Home = () => {
           scoreThreshold: 0.5
         }))
         .withFaceLandmarks();
+      
+      setLoadingProgress(50);
+      setLoadingStep("Analyzing landmarks...");
 
       if (!detection) {
         toast({ 
@@ -96,11 +107,17 @@ const Home = () => {
 
       setLandmarks(detection.landmarks);
 
+      setLoadingProgress(70);
+      setLoadingStep("Computing metrics...");
+      
       // Analyze face
       const { metrics, quality } = analyzeFace(detection.landmarks);
       const formattedMetrics = formatMetrics(metrics, gender);
       const overallScore = calculateOverallScore(metrics, gender);
       const harmonySummary = generateHarmonySummary(overallScore, metrics, gender);
+      
+      setLoadingProgress(100);
+      setLoadingStep("Analysis complete ✓");
 
       setResults({
         metrics: formattedMetrics,
@@ -119,6 +136,10 @@ const Home = () => {
       });
     } finally {
       setAnalyzing(false);
+      setTimeout(() => {
+        setLoadingStep("");
+        setLoadingProgress(0);
+      }, 2000);
     }
   };
 
@@ -205,11 +226,11 @@ const Home = () => {
         </p>
       </div>
 
-      {/* Model Loading Progress */}
-      {loadingProgress > 0 && loadingProgress < 100 && (
+      {/* Loading Progress */}
+      {loadingStep && (
         <div className="glass-card p-4 mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Loading AI models...</span>
+            <span className="text-sm font-medium">{loadingStep}</span>
             <span className="text-sm text-muted-foreground">{loadingProgress}%</span>
           </div>
           <div className="w-full bg-muted rounded-full h-2">

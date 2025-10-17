@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 export const Header = () => {
@@ -18,9 +17,9 @@ export const Header = () => {
     <header className="sticky top-0 z-50 w-full glass border-b border-white/20 dark:border-gray-800/50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
-          <Sparkles className="w-6 h-6 text-primary animate-glow-pulse" />
+          <span className="text-3xl">🐆</span>
           <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            Lynxmax 🐆
+            Lynxmax
           </span>
         </Link>
         
